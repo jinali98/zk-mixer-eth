@@ -6,6 +6,17 @@ import {IVerifier} from "./IVerifier.sol";
 contract Mixer {
     IVerifier public immutable i_verifier;
 
+    mapping(bytes32 => bool) public s_commitments;
+
+    uint256 public constant DENOMINATION_AMOUNT = 0.00001 ether;
+
+    //ERRORS
+    error Mixer__CommitmentAlreadyExists(bytes32 commitment);
+    error Mixer__InvalidDepositAmount(
+        uint256 amount,
+        uint256 denominationAmount
+    );
+
     constructor(IVerifier _verifier) {
         i_verifier = _verifier;
     }
@@ -15,10 +26,19 @@ contract Mixer {
     @dev This function is used to deposit funds into the mixer
     @param _commitment The poseidon hash of the nullifier and the secret that generates offchain
     */
-    function deposit(bytes32 _commitment) external {
+    function deposit(bytes32 _commitment) external payable {
         // verify that the commitment is not already in the merkle tree to prevent having the same commitment multiple times
+        require(
+            !s_commitments[_commitment],
+            Mixer__CommitmentAlreadyExists(_commitment)
+        );
         // allow users to deposit eth and verify that the deposited amount is similar to the fixed amount
+        require(
+            msg.value == DENOMINATION_AMOUNT,
+            Mixer__InvalidDepositAmount(msg.value, DENOMINATION_AMOUNT)
+        );
         // add the commitment to the merkle tree
+        s_commitments[_commitment] = true;
     }
 
     /**
